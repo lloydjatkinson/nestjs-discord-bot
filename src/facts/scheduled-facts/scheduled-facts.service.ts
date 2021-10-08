@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
 
-import { DiscordMessagingService } from 'src/messaging/discord-messaging/discord-messaging.service';
+import { DiscordMessagingService } from '../../discord-client/discord-messaging/discord-messaging.service';
 
 @Injectable()
 export class ScheduledFactsService {

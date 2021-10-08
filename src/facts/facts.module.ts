@@ -1,10 +1,11 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { MessagingModule } from 'src/messaging/messaging.module';
+
+import { DiscordClientModule } from '../discord-client/discord-client.module';
 import { ScheduledFactsService } from './scheduled-facts/scheduled-facts.service';
 
 @Module({
-    imports: [ConfigModule, MessagingModule],
+    imports: [ConfigModule, DiscordClientModule],
     providers: [ScheduledFactsService],
 })
 export class FactsModule {}
