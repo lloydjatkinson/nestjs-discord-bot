@@ -1,7 +1,7 @@
 import { Injectable, Logger, OnApplicationBootstrap, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
-import { Client, Intents, TextChannel } from 'discord.js';
+import { Client, Intents, TextBasedChannels, TextChannel } from 'discord.js';
 import { SlashCommandBuilder } from '@discordjs/builders';
 import { Routes } from 'discord-api-types/v9';
 import { REST } from '@discordjs/rest';
@@ -40,11 +40,25 @@ export class DiscordClientService implements OnModuleInit {
 
     private async initialiseDiscordClient() : Promise<void> {
         try {
-            this.discordClient = new Client({ intents: [Intents.FLAGS.GUILDS] });
+            this.discordClient = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES] });
             this.discordClient.login(this.discordToken);
     
-            await this.discordClient.once('ready', async (client) => {
+            this.discordClient.once('ready', async (client) => {
                 this.logger.log('Discord client fired "ready" event');
+                // this.sendMessage(this.discordBotLogChannelId, 'Discord bot running and connected.');
+            });
+
+            // const isNamedChannel = (channel: TextB): channel is TextBasedChannels =>
+            //     (channel as TextBasedChannels).type == 'GUILD_TEXT';
+
+            this.discordClient.on('messageCreate', (message) => {
+                if (message.channel.type === 'GUILD_TEXT' || message.channel.type === 'GUILD_PUBLIC_THREAD') {
+                    this.logger.verbose(`#${message.channel.name}: ${message.content}`);
+                }
+
+                // if (isNamedChannel(message.channel)) {
+                //     this.logger.verbose(`#${message.channel.name}: ${message.content}`);
+                // }
             });
         } catch (error) {
             this.logger.error(`Failed to create Discord client: ${error.message}`);
@@ -63,22 +77,22 @@ export class DiscordClientService implements OnModuleInit {
         this.logger.log('Created Discord REST client');
     }
 
-    private async registerCommands() : Promise<void> {
-        const commands = [
-            new SlashCommandBuilder().setName('ping').setDescription('Replies with pong!'),
-            new SlashCommandBuilder().setName('server').setDescription('Replies with server info!'),
-            new SlashCommandBuilder().setName('user').setDescription('Replies with user info!'),
-        ];
+    // private async registerCommands() : Promise<void> {
+    //     const commands = [
+    //         new SlashCommandBuilder().setName('ping').setDescription('Replies with pong!'),
+    //         new SlashCommandBuilder().setName('server').setDescription('Replies with server info!'),
+    //         new SlashCommandBuilder().setName('user').setDescription('Replies with user info!'),
+    //     ];
         
-        try {
-            await this.discordRestClient.put(Routes.applicationGuildCommands(this.discordApplicationId, this.discordGuildId), { body: commands });
+    //     try {
+    //         await this.discordRestClient.put(Routes.applicationGuildCommands(this.discordApplicationId, this.discordGuildId), { body: commands });
     
-            const routes: any = await this.discordRestClient.get(Routes.applicationGuildCommands(this.discordApplicationId, this.discordGuildId));
-            this.logger.log(`Registered ${routes.length} commands`);
-        } catch (error) {
-            this.logger.error(`Failed to register commands: ${error.message}`);            
-        }
-    }
+    //         const routes: any = await this.discordRestClient.get(Routes.applicationGuildCommands(this.discordApplicationId, this.discordGuildId));
+    //         this.logger.log(`Registered ${routes.length} commands`);
+    //     } catch (error) {
+    //         this.logger.error(`Failed to register commands: ${error.message}`);            
+    //     }
+    // }
 
     public async registerCommand(slashCommand: SlashCommandBuilder) : Promise<void> {
         this.logger.verbose(`Registering command`);
@@ -93,7 +107,7 @@ export class DiscordClientService implements OnModuleInit {
     }
 
     public async sendMessage(channelId: string, message: string) : Promise<void> {
-        this.logger.verbose(`Sending message to channel ${channelId}: ${message}`);
+        this.logger.verbose(`Sending message to channel "${channelId}": "${message}"`);
 
         try {
             await backOff(async () => await (this.discordClient?.channels.cache.get(channelId) as TextChannel)?.send(message), { jitter: 'full' });
